@@ -11,7 +11,7 @@ class Client:
 
         self.id = id
         self.w = np.ndarray(Config.w_size)
-        self.name = 'client_' + self.id
+        self.name = 'client_' + str(self.id)
 
         self.c_p, self.c_g = None, None
         self.c_sk, self.c_pk = None, None
@@ -27,6 +27,7 @@ class Client:
         self.e_other = []
 
         self.p_u_v = None
+        self.p_u_v_c = 0
 
         self.b_u = None
         self.p_u = None
@@ -93,26 +94,36 @@ class Client:
     def compute_mask_1(self):
         self.p_u_v = np.zeros(self.w.shape)
         u = self.id
+        count = 0
         for item in self.client_pk:
             v = int(item[0])
             if u == v:
                 continue
-            else:
+            elif self.e_other[v] != 0:
+                count += 1
                 pk = int(item[2])
                 sk = self.s_sk
                 p = self.s_p
                 shape = self.p_u_v.shape
-                seed = KA.key_agreement(pk, sk, p)
-                np.random.seed(seed)
-                r = np.random.random(shape)
+                ks = []
+                key = KA.key_agreement(pk, sk, p)
+                for i in range(0, len(key), 4):
+                    ks.append(int.from_bytes(key[i:i + 4], 'little'))
+                r = np.zeros(shape)
+                for seed in ks:
+                    seed %= 2**32 - 1
+                    np.random.seed(seed)
+                    r += np.random.random(shape)
+
                 if u > v:
                     self.p_u_v += r
                 else:
                     self.p_u_v -= r
+        self.p_u_v_c = count
 
     # round_2_3 计算掩饰值2
     def compute_mask_2(self):
-        self.b_u = int(random.random() * (10 ** 16))
+        self.b_u = int(random.random() * (10 ** 16)) % (2**32 - 1)
         np.random.seed(self.b_u)
         self.p_u = np.random.random(self.w.shape)
 
@@ -120,16 +131,16 @@ class Client:
     def compute_mask_vector(self):
         self.y_u = self.w + self.p_u + self.p_u_v
 
-    # round_2_5 向服务器B发送带掩饰的私有向量
-    def send_y_u_B(self):
-        return self.id, self.y_u
-
-    # round_2_6 向服务器A发送b_u
+    # round_2_5 向服务器A发送b_u
     def send_b_u_A(self):
         return self.id, self.b_u
 
+    # round_2_6 向服务器B发送带掩饰的私有向量
+    def send_y_u_B(self):
+        return self.id, self.y_u
+
     # round_3_0 接收来自服务器A的用户列表U_recon
-    def receive_u_5(self,U_recon):
+    def receive_u_recon(self,U_recon):
         self.U_recon = U_recon
 
     # round_3_1 解密需要重建密钥的用户集合

@@ -3,6 +3,7 @@ from tools import AuthenticatedEncryption as AE
 from tools import SecretShare as ss
 from tools import config
 import random
+import numpy as np
 
 def AE_test():
     p,g = KA.init_parameters(1024)
@@ -65,13 +66,10 @@ if __name__ == '__main__':
     t2 = AE.decrypt(key21, c2, tags2, nonce2)
     index_20,secret_20,secret_21 = t2.split('|'.encode())
 
-
-
     # client3
     key31 = KA.key_agreement(pk1, sk3, p)
     t3 = AE.decrypt(key31, c3, tags3, nonce3)
     index_30, secret_30, secret_31 = t3.split('|'.encode())
-
 
     share = []
     share.append([int(index_30), secret_30, secret_31])
@@ -79,6 +77,19 @@ if __name__ == '__main__':
 
     re_sk1 = ss.reconstruction(share)
     print(re_sk1)
+
+    print(key12)
+    ks = []
+    key = key12
+    for i in range(0, len(key), 4):
+        ks.append(int.from_bytes(key[i:i + 4], 'little'))
+    r = np.zeros(10)
+    for seed in ks:
+        seed %= 2 ** 32 - 1
+        np.random.seed(seed)
+        r += np.random.random(10)
+
+
     # re_sk1 = ss.reconstruction(secrets[:1])
     # key = KA.key_agreement(pk2,sk1,p)
 

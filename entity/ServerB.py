@@ -18,6 +18,7 @@ class ServerB:
 
     # round_2_0 接收来自客户端的y_u
     def receive_y_u(self,u,y_u):
+        u = int(u)
         self.y_u[u] = y_u
         self.U_4[u] = 1
 
@@ -34,7 +35,7 @@ class ServerB:
     # round_2_3 对y_u求和
     def sum_y_u(self):
         for i in range(self.client_num):
-            if self.U_5[i] and self.y_u[i]:
+            if self.U_5[i] and self.U_4[i]:
                 self.sum += self.y_u[i]
 
     # round_2_4 发送u_5和sum给服务器A

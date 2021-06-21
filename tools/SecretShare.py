@@ -31,7 +31,7 @@ def reconstruction(shares):
         spilt = []
         for item in shares:
             spilt.append((item[0],item[i]))
-        re_secret_bytes += Shamir.combine(spilt,False)
+        re_secret_bytes += Shamir.combine(spilt, False)
     re_secret = int.from_bytes(re_secret_bytes,'little')
     return re_secret
 
