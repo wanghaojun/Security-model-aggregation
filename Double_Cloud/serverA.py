@@ -1,14 +1,16 @@
-from entity import Config
+from Double_Cloud import utils
 import numpy as np
 from tools import SecretShare as SS
 from tools import KeyAgreement as KA
 
 
 class ServerA:
-    def __init__(self):
+    def __init__(self,server_conf, model_conf):
         self.name = 'serverA'
-        self.client_num = Config.client_num
-        self.size = Config.w_size
+        self.server_conf = server_conf
+        self.model_conf = model_conf
+        self.client_num = self.server_conf['client_num']
+        self.size = self.server_conf['w_size']
 
         self.client_pk = [0] * self.client_num
         self.U_1 = [0] * self.client_num
@@ -28,7 +30,7 @@ class ServerA:
         self.p_u_sum = np.zeros(self.size)
         self.p_u_v_sum = np.zeros(self.size)
         self.sk_recon = [0] * self.client_num
-        self.s_p, self.s_g = KA.init_parameter(Config.s_size)
+        self.s_p, self.s_g = KA.init_parameter(self.server_conf['s_size'])
         self.res = None
 
     # round_0_0 接受客户端的公钥
@@ -102,7 +104,7 @@ class ServerA:
 
     # round_3_2 重建掉线用户U_recon密钥
     def reconstruction(self):
-        t = Config.share_secrets_t
+        t = self.server_conf['share_secrets_t']
         for i in range(self.client_num):
             if self.U_recon[i]:
                 share = [x[i] for x in self.shares]
@@ -137,5 +139,5 @@ class ServerA:
 
     # round_3_4 计算最终聚合结果
     def compute_res(self):
-        _res = (self.sum - self.p_u_sum + self.p_u_v_sum).round(Config.rounding + 1)
-        self.res = np.array(_res).round(Config.rounding - 1)
+        _res = (self.sum - self.p_u_sum + self.p_u_v_sum).round(self.server_conf['rounding'] + 1)
+        self.res = np.array(_res).round(self.server_conf['rounding'] - 1)

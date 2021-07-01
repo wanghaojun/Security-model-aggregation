@@ -1,16 +1,21 @@
-from entity import Config
-from entity import Client
-from entity import ServerA
-from entity import ServerB
+from Double_Cloud import utils
+from Double_Cloud import client
+from Double_Cloud import serverA
+from Double_Cloud import serverB
+
+
 import numpy as np
 # 初始化客户端
 print("init start")
-client_num = Config.client_num
 clients = []
+client_config = utils.load_json('./config/client.json')
+model_config = utils.load_json('./config/model.json')
+server_config = utils.load_json('./config/server.json')
+client_num = server_config['client_num']
 for i in range(client_num):
-    clients.append(Client.Client(i))
-serverA = ServerA.ServerA()
-serverB = ServerB.ServerB()
+    clients.append(client.Client(i, client_config, model_config))
+serverA = serverA.ServerA(server_config,model_config)
+serverB = serverB.ServerB(server_config)
 temp = [0] * client_num
 temp_bu = [0] * client_num
 temp_yu = [0] * client_num
@@ -114,7 +119,7 @@ print("aggregation result:")
 print(serverA.res)
 
 print("true result:")
-s = np.zeros(Config.w_size)
+s = np.zeros(serverA.server_conf['w_size'])
 for c in clients:
     if u_5[c.id]:
         s += c.w

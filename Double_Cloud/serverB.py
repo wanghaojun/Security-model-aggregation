@@ -1,12 +1,13 @@
-from entity import Config
+from Double_Cloud import utils
 import numpy as  np
 
 
 class ServerB:
 
-    def __init__(self):
+    def __init__(self,conf):
         self.name = 'serverB'
-        self.client_num = Config.client_num
+        self.server_conf = conf
+        self.client_num = self.server_conf['client_num']
 
         self.y_u = [0] * self.client_num
 
@@ -14,7 +15,7 @@ class ServerB:
         self.U_4 = [0] * self.client_num
 
         self.U_5 = [0] * self.client_num
-        self.sum = np.zeros(Config.w_size)
+        self.sum = np.zeros(self.server_conf['w_size'])
 
     # round_2_0 接收来自客户端的y_u
     def receive_y_u(self,u,y_u):

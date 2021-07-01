@@ -1,0 +1,17 @@
+{
+	"model_name" : "resnet18",
+
+	"client_num" : 10,
+
+	"split" : "|||",
+
+	"w_size" : 11699132,
+
+	"share_secrets_t" : 5,
+
+	"rounding" : 5,
+
+	"c_size" : 1024,
+
+	"s_size" : 256
+}

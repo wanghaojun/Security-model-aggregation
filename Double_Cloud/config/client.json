@@ -1,0 +1,15 @@
+{
+
+	"c_size" : 1024,
+
+	"s_size" : 256,
+
+    "w_size" : 11699132,
+
+	"split" : "|||",
+
+	"local_epochs" : 3,
+
+	"share_secrets_t" : 5
+
+}
