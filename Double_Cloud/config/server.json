@@ -13,5 +13,18 @@
 
 	"c_size" : 1024,
 
-	"s_size" : 256
+	"s_size" : 256,
+
+	"serverA_port" : 9000,
+
+	"serverB_port" : 9001,
+
+	"wait_time" : 2,
+
+	"model_wait_time" : 10,
+
+	"serverA_url" : "http://127.0.0.1:9000/",
+
+	"serverB_url" : "http://127.0.0.1:9001/"
+
 }

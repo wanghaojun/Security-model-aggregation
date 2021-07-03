@@ -10,6 +10,11 @@
 
 	"local_epochs" : 3,
 
-	"share_secrets_t" : 5
+	"share_secrets_t" : 5,
+
+	"serverA_url" : "http://127.0.0.1:9000/",
+
+	"serverB_url" : "http://127.0.0.1:9001/"
+
 
 }

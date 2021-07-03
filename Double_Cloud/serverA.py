@@ -1,23 +1,39 @@
-from Double_Cloud import utils
 import numpy as np
+from flask_socketio import SocketIO, send, emit
+import socketio
+from Double_Cloud import utils
 from tools import SecretShare as SS
 from tools import KeyAgreement as KA
+from flask import Flask
+import time
+import logging
+
+logger = logging.Logger("serverA",level=logging.INFO)
+LOG_FORMAT = "%(name)s - %(asctime)s  - %(levelname)s - %(message)s"
+current_time = lambda: int(round(time.time() * 1000))
+logging.basicConfig(level=logging.INFO,format=LOG_FORMAT)
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
 
-class ServerA:
-    def __init__(self,server_conf, model_conf):
+class ServerA(object):
+    def __init__(self, server_conf, model_conf):
         self.name = 'serverA'
         self.server_conf = server_conf
         self.model_conf = model_conf
         self.client_num = self.server_conf['client_num']
         self.size = self.server_conf['w_size']
+        self.wait_time = self.server_conf['wait_time']
 
-        self.client_pk = [0] * self.client_num
+        # round 0 param
+        self.client_pk = {}
+        self.round0_time = 0
         self.U_1 = [0] * self.client_num
 
+        self.round1_time = 0
         self.e_u_v = [[0 for _ in range(self.client_num)] for i in range(self.client_num)]
         self.U_2 = [0] * self.client_num
 
+        self.round2_time = 0
         self.b_u = [0] * self.client_num
         self.U_3 = [0] * self.client_num
 
@@ -33,51 +49,91 @@ class ServerA:
         self.s_p, self.s_g = KA.init_parameter(self.server_conf['s_size'])
         self.res = None
 
-    # round_0_0 接受客户端的公钥
-    # 用户列表为U_1
+        self.app = Flask(self.name)
+        self.serverB = socketio.Client()
+        self.sio = SocketIO(self.app, logger=False)
+        self.sio.on_event('client_pk', self.receive_client_pk)
+        self.sio.on_event('encrypt_data', self.receive_e)
+        self.sio.on_event('b_u',self.receive_b_u)
+        self.sio.on_event('sum',self.receive_u5_sum)
+
+
+    # round_0
+    # 接受客户端的公钥 用户列表为U_1
+    # 向U_1用户集合发送收到的公钥集合
     def receive_client_pk(self, u, c_pk, s_pk):
-
-        self.client_pk[u] = [u, c_pk, s_pk]
-        self.U_1[u] = 1
-
-    # round_0_1 向U_1用户集合发送收到的公钥集合
-    def send_client_pk(self,u):
-        u = int(u)
+        if not self.round0_time:
+            self.round0_time = current_time()
+        if current_time() <= self.round0_time + self.wait_time * 1000:
+            logging.info("receive pk from :" + str(u))
+            self.client_pk[u] = [c_pk, s_pk]
+            self.U_1[u] = 1
+        else:
+            logging.info("receive pk from :" + str(u) + " time out")
+        _wait = self.wait_time - (current_time() - self.round0_time) / 1000
+        if _wait > 0:
+            time.sleep(_wait)
         if self.U_1[u]:
-            return self.client_pk
+            emit('client_pk', self.client_pk)
+        else:
+            emit('dis_connect')
 
     # round_1_0 接受来自客户端的密文
     # u 发送客户端id
     # e的内容：[u_id, v_id,cipher-text,tag,nonce]
     # 用户列表为U_2
-    def receive_e(self, u, e):
-        u = int(u)
-        self.U_2[u] = 1
-        for item in e:
-            if str(u) == str(item[0]):
-                v = int(item[1])
-                self.e_u_v[u][v] = item
-
-    # round_1_1 向客户端发送其它客户端给他的密文
-    def send_e_other(self, v):
-        v = int(v)
-        if self.U_2[v]:
-            return [e_u[v] for e_u in self.e_u_v]
+    # round_1_1 向U_2中客户端发送其它客户端给他的密文
+    def receive_e(self, u, e:{}):
+        if not self.round1_time:
+            self.round1_time = current_time()
+        if current_time() <= self.round1_time + self.wait_time * 1000:
+            logging.info("receive encrypt_data from :" + str(u))
+            u = int(u)
+            self.U_2[u] = 1
+            _list = []
+            for v, data in e.items():
+                v = int(v)
+                self.e_u_v[u][v] = data
+        else:
+            logging.info("receive encrypt_data from :" + str(u) + " time out")
+        _wait = self.wait_time - (current_time() - self.round1_time) / 1000
+        if _wait > 0:
+            time.sleep(_wait)
+        if self.U_2[u]:
+            _send_list = [e_u[u] for e_u in self.e_u_v]
+            _send_dic = {}
+            for i in range(len(_send_list)):
+                if _send_list[i]:
+                    _send_dic[i] = _send_list[i]
+            emit('encrypt_data', _send_dic)
+        else:
+            emit('dis_connect')
 
     # round_2_0 接受来自客户端的b_u
     def receive_b_u(self, u, b_u):
-        u = int(u)
-        self.b_u[u] = b_u
-        self.U_3[u] = 1
-
-    # round_2_1 发送存活客户端列表给服务器B
-    def send_survive_client(self):
-        return self.U_3
+        if not self.round2_time:
+            self.round2_time = current_time()
+        if current_time() <= self.round2_time + self.wait_time * 1000:
+            logging.info("receive b_u from :" + str(u))
+            u = int(u)
+            self.b_u[u] = b_u
+            self.U_3[u] = 1
+        else:
+            logging.info("receive b_u from :" + str(u) + " time out")
+        _wait = self.wait_time - (current_time() - self.round2_time) / 1000
+        if _wait > 0:
+            time.sleep(_wait)
+        self.serverB.connect(self.server_conf['serverB_url'])
+        self.serverB.emit('U_3', self.U_3)
+    # # round_2_1 发送存活客户端列表给服务器B
+    # def send_survive_client(self):
+    #     return self.U_3
 
     # round_2_2 接收来自服务器B的sum和U_5
     def receive_u5_sum(self, U_5, sum):
         self.U_5 = U_5
         self.sum = sum
+        logging.info('receive u_5 and sum from serverB')
 
     # round_2_3 求需要恢复密钥的掉线用户集合（u in U_2 and u not in U_5）:
     def compute_u_recon(self):
@@ -108,7 +164,7 @@ class ServerA:
         for i in range(self.client_num):
             if self.U_recon[i]:
                 share = [x[i] for x in self.shares]
-                share = share[:t+1]
+                share = share[:t + 1]
                 if len(share) >= t:
                     self.sk_recon[i] = SS.reconstruction(share)
 
@@ -141,3 +197,13 @@ class ServerA:
     def compute_res(self):
         _res = (self.sum - self.p_u_sum + self.p_u_v_sum).round(self.server_conf['rounding'] + 1)
         self.res = np.array(_res).round(self.server_conf['rounding'] - 1)
+
+    def start(self):
+        self.sio.run(self.app, port=self.server_conf['serverA_port'],log_output=False)
+
+
+if __name__ == '__main__':
+    server = ServerA(utils.load_json('./config/server.json'), utils.load_json('./config/model.json'))
+    server.start()
+
+    # server.send_client_pk()
