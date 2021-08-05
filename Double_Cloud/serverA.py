@@ -36,6 +36,7 @@ class ServerA(object):
         self.round2_time = 0
         self.b_u = [0] * self.client_num
         self.U_3 = [0] * self.client_num
+        self.U_3_send = False
 
         self.sum = None
         self.U_5 = None
@@ -123,8 +124,11 @@ class ServerA(object):
         _wait = self.wait_time - (current_time() - self.round2_time) / 1000
         if _wait > 0:
             time.sleep(_wait)
-        self.serverB.connect(self.server_conf['serverB_url'])
-        self.serverB.emit('U_3', self.U_3)
+        if not self.U_3_send:
+            logging.info("send U_3 to serverB")
+            self.U_3_send = True
+            self.serverB.connect(self.server_conf['serverB_url'])
+            self.serverB.emit('u_3', self.U_3)
     # # round_2_1 发送存活客户端列表给服务器B
     # def send_survive_client(self):
     #     return self.U_3
@@ -132,7 +136,7 @@ class ServerA(object):
     # round_2_2 接收来自服务器B的sum和U_5
     def receive_u5_sum(self, U_5, sum):
         self.U_5 = U_5
-        self.sum = sum
+        self.sum = np.array(sum)
         logging.info('receive u_5 and sum from serverB')
 
     # round_2_3 求需要恢复密钥的掉线用户集合（u in U_2 and u not in U_5）:
@@ -146,11 +150,11 @@ class ServerA(object):
         if self.U_3[u]:
             return self.U_recon
 
-    # round_3_0 接收来自服务器A的分享值
+    # round_3_0 接收来自客户端的分享值
     def receive_share(self, u, share):
         self.shares.append(share)
 
-    # round_3_1 聚合掩饰值2p_u
+    # round_3_1 聚合掩饰值2 p_u
     def sum_p_u(self):
         for i in range(self.client_num):
             if self.U_5[i]:

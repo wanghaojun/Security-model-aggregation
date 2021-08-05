@@ -31,12 +31,12 @@ class ServerB:
         self.app = Flask(self.name)
         self.sio = SocketIO(self.app, logger=False)
         self.serverA = socketio.Client()
-        self.serverA.connect(self.server_conf['serverA_url'])
         self.sio.on_event('y_u',self.receive_y_u)
         self.sio.on_event('u_3',self.receive_u_3)
 
     # round_2_0 接收来自客户端的y_u
     def receive_y_u(self, u, y_u):
+        # logging.info("receive y_u" + str(u) + y_u)
         _wait_time = self.server_conf['model_wait_time']
         if not self.round2_time:
             self.round2_time = current_time()
@@ -53,6 +53,7 @@ class ServerB:
 
     # round_2_1 接收来自serverA的用户列表
     def receive_u_3(self, u_3):
+        logging.info("receive u_3 from serverA")
         self.U_3 = u_3
         self.intersection_u3_u4()
         self.sum_y_u()
@@ -63,16 +64,20 @@ class ServerB:
         for i in range(self.client_num):
             if self.U_3[i] and self.U_4[i]:
                 self.U_5[i] = 1
-
+        logging.info("intersection u3 u4 finish")
     # round_2_3 对y_u求和
     def sum_y_u(self):
         for i in range(self.client_num):
-            if self.U_5[i] and self.U_4[i]:
+            if self.U_5[i]:
                 self.sum += self.y_u[i]
+        logging.info("sum y_u finish")
 
     # round_2_4 发送u_5和sum给服务器A
     def send_u5_sum(self):
-        self.serverA.emit('sum', (self.U_5, self.sum))
+        logging.info("send y_u to serverA")
+        self.serverA.connect(self.server_conf['serverA_url'])
+        self.serverA.emit('sum', (self.U_5, self.sum.tolist()))
+        self.serverA.disconnect()
 
     def start(self):
         self.sio.run(self.app, port=self.server_conf['serverB_port'], log_output=False)
