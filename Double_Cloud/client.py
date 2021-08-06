@@ -55,6 +55,7 @@ class Client:
         self.sioA.on('dis_connect', self.dis_connect)
         self.sioA.on('client_pk', self.receive_client_pk)
         self.sioA.on('encrypt_data', self.receive_e_other)
+        self.sioA.on("u_recon",self.receive_u_recon)
 
     def dis_connect(self):
         self.survive = False
@@ -124,7 +125,7 @@ class Client:
         count = 0
         for key,item in self.client_pk.items():
             v = int(key)
-            if u == v and str(v) not in self.e_other:
+            if u == v or str(v) not in self.e_other:
                 continue
             pk = int(item[1])
             sk = self.s_sk
@@ -166,6 +167,7 @@ class Client:
     # round_3_0 接收来自服务器A的用户列表U_recon
     def receive_u_recon(self, U_recon):
         self.U_recon = U_recon
+        logging.info("receive u_recon len:" )
 
     # round_3_1 解密需要重建密钥的用户集合
     def decrypt_e_other(self):

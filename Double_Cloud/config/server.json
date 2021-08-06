@@ -1,7 +1,7 @@
 {
 	"model_name" : "resnet18",
 
-	"client_num" : 10,
+	"client_num" : 5,
 
 	"split" : "|||",
 

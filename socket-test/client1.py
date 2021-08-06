@@ -17,10 +17,10 @@ class Client:
         print('from server:' + str(data))
 
     def send(self):
-        self.sioA.connect('http://127.0.0.1:5002/')
-        self.sioA.emit('my_message', ('111'.encode(),'2222'))
-        self.sioB.connect('http://127.0.0.1:5001/')
-        self.sioB.emit('my_message', ('222'.encode(),'2222'))
+        self.sioA.connect('http://127.0.0.1:5001/')
+        self.sioA.emit('my_message', {"id": 1})
+        # self.sioB.connect('http://127.0.0.1:5001/')
+        # self.sioB.emit('my_message', ('222'.encode(),'2222'))
 
 
 if __name__ == '__main__':

@@ -34,6 +34,8 @@ class ServerB:
         self.sio.on_event('y_u',self.receive_y_u)
         self.sio.on_event('u_3',self.receive_u_3)
 
+        self.sio.on_event("end",self.end)
+
     # round_2_0 接收来自客户端的y_u
     def receive_y_u(self, u, y_u):
         # logging.info("receive y_u" + str(u) + y_u)
@@ -81,6 +83,9 @@ class ServerB:
 
     def start(self):
         self.sio.run(self.app, port=self.server_conf['serverB_port'], log_output=False)
+
+    def end(self):
+        self.sio.stop()
 
 
 if __name__ == '__main__':

@@ -58,6 +58,8 @@ class ServerA(object):
         self.sio.on_event('b_u',self.receive_b_u)
         self.sio.on_event('sum',self.receive_u5_sum)
 
+        self.sio.on_event("end",self.end)
+
 
     # round_0
     # 接受客户端的公钥 用户列表为U_1
@@ -138,17 +140,20 @@ class ServerA(object):
         self.U_5 = U_5
         self.sum = np.array(sum)
         logging.info('receive u_5 and sum from serverB')
+        self.compute_u_recon()
+        self.send_recon()
 
     # round_2_3 求需要恢复密钥的掉线用户集合（u in U_2 and u not in U_5）:
     def compute_u_recon(self):
         for i in range(self.client_num):
             if self.U_2[i] and not self.U_5[i]:
                 self.U_recon[i] = 1
+        logging.info('compute recon finish')
 
     # round_2_4 向U_3客户端发送需要恢复密钥的用户集合U_recon
-    def send_recon(self, u):
-        if self.U_3[u]:
-            return self.U_recon
+    def send_recon(self):
+        emit("u_recon",self.U_recon,broadcast=True)
+        logging.info('broadcast u_recon finish')
 
     # round_3_0 接收来自客户端的分享值
     def receive_share(self, u, share):
@@ -184,13 +189,12 @@ class ServerA(object):
                         pk = self.client_pk[v][2]
                         ks = []
                         key = KA.key_agreement(pk, sk, p)
+                        seed = 0
                         for i in range(0, len(key), 4):
-                            ks.append(int.from_bytes(key[i:i + 4], 'little'))
-                        r = np.zeros(self.size)
-                        for seed in ks:
+                            seed += int.from_bytes(key[i:i + 4], 'little')
                             seed %= 2 ** 32 - 1
-                            np.random.seed(seed)
-                            r += np.random.random(self.size)
+                        np.random.seed(seed)
+                        r = np.random.random(self.size)
                         if u > v:
                             p_u_v += r
                         else:
@@ -205,9 +209,12 @@ class ServerA(object):
     def start(self):
         self.sio.run(self.app, port=self.server_conf['serverA_port'],log_output=False)
 
+    def end(self):
+        self.sio.stop()
 
 if __name__ == '__main__':
     server = ServerA(utils.load_json('./config/server.json'), utils.load_json('./config/model.json'))
     server.start()
+
 
     # server.send_client_pk()

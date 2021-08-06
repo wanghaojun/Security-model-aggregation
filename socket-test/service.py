@@ -7,11 +7,15 @@ class serverA():
         self.app = Flask('NAME')
         self.app.config['SECRET_KEY'] = 'secret'
         self.sockio = SocketIO(self.app)
+        self.is_send = False
 
         @self.sockio.on('my_message')
-        def handle_message(data,m):
-            print('receive message:' + str(data) + str(m))
-            emit('my_response', data)
+        def handle_message(data):
+            print('receive message:' + str(data))
+            time.sleep(3)
+            emit("my_response", "this is server", broadcast=True)
+
+
 
 
 if __name__ == '__main__':
