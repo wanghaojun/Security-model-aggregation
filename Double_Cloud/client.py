@@ -4,18 +4,28 @@ from tools import AuthenticatedEncryption as AE
 from Double_Cloud import utils
 import numpy as np
 import random
-
+import Double_Cloud.models as model
+import torch
 
 
 class Client:
 
-    def __init__(self, id, client_conf, model_conf):
+    def __init__(self, id, conf, train_dataset):
+
+        self.conf = conf
 
         self.id = id
-        self.client_conf = client_conf
-        self.model_conf = model_conf
-        self.w = np.ndarray(int(self.client_conf['w_size']))
         self.name = 'client_' + str(self.id)
+        self.diff = dict()
+
+        self.local_model = model.get_model(self.conf["model_name"])
+        self.train_dataset = train_dataset
+        all_range = list(range(len(self.train_dataset)))
+        data_len = int(len(self.train_dataset) / self.conf['no_models'])
+        train_indices = all_range[id * data_len: (id + 1) * data_len]
+        self.train_loader = torch.utils.data.DataLoader(self.train_dataset, batch_size=conf["batch_size"],
+                                                        sampler=torch.utils.data.sampler.SubsetRandomSampler(
+                                                            train_indices))
 
         self.c_p, self.c_g = None, None
         self.c_sk, self.c_pk = None, None
@@ -36,17 +46,17 @@ class Client:
         self.b_u = None
         self.p_u = None
 
-        self.y_u = np.ndarray(int(self.client_conf['w_size']))
+        self.y_u = np.ndarray(self.conf['w_size'])
 
         self.U_recon = None
         self.share = []
 
     # round_0_0 生成两对公钥私钥 256位用来做掩饰 1024位用来密钥交换进行加密
     def gen_pk_sk(self):
-        self.c_p, self.c_g = KA.init_parameter(self.client_conf['c_size'])
+        self.c_p, self.c_g = KA.init_parameter(self.conf['c_size'])
         self.c_sk, self.c_pk = KA.generate_key(self.c_p, self.c_g)
 
-        self.s_p, self.s_g = KA.init_parameter(self.client_conf['s_size'])
+        self.s_p, self.s_g = KA.init_parameter(self.conf['s_size'])
         self.s_sk, self.s_pk = KA.generate_key(self.s_p, self.s_g)
 
     # round_0_1 发送两队公钥到服务器
@@ -60,7 +70,7 @@ class Client:
     # round_1_1 生成s_sk的秘密分享
     def share_secrets(self):
         n = len(self.client_pk)
-        t = self.client_conf['share_secrets_t']
+        t = self.conf['share_secrets_t']
         if n >= t:
             self.secrets = SS.share(self.s_sk, t, n)
 
@@ -70,7 +80,7 @@ class Client:
         u = self.id
         u_sk = self.c_sk
         p = self.c_p
-        split = self.client_conf['split'].encode()
+        split = self.conf['split'].encode()
         for i in range(len(self.client_pk)):
             pk = self.client_pk[i]
             secret = self.secrets[i]
@@ -92,39 +102,69 @@ class Client:
         self.e_other = e_other
 
     # round_2_1 模型参数更新
-    def model_update(self):
-        self.w = np.ones(self.client_conf['w_size'])
+    def model_update(self,model):
+
+        for name, param in model.state_dict().items():
+            self.local_model.state_dict()[name].copy_(param.clone())
+
+        # print(id(model))
+        optimizer = torch.optim.SGD(self.local_model.parameters(), lr=self.conf['lr'],
+                                    momentum=self.conf['momentum'])
+        # print(id(self.local_model))
+        self.local_model.train()
+        for e in range(self.conf["local_epochs"]):
+
+            for batch_id, batch in enumerate(self.train_loader):
+                data, target = batch
+
+                if torch.cuda.is_available():
+                    data = data.cuda()
+                    target = target.cuda()
+
+                optimizer.zero_grad()
+                output = self.local_model(data)
+                loss = torch.nn.functional.cross_entropy(output, target)
+                loss.backward()
+
+                optimizer.step()
+            print("Epoch %d done." % e)
+        for name, data in self.local_model.state_dict().items():
+            self.diff[name] = (data - model.state_dict()[name]).numpy()
 
     # round_2_2 计算掩饰值1
     def compute_mask_1(self):
-        self.p_u_v = np.zeros(self.w.shape)
+        self.p_u_v = dict()
         u = self.id
-        count = 0
+        seeds = {}
         for item in self.client_pk:
             v = int(item[0])
             if u == v:
                 continue
             elif self.e_other[v] != 0:
-                count += 1
                 pk = int(item[2])
                 sk = self.s_sk
                 p = self.s_p
-                shape = self.p_u_v.shape
-                ks = []
                 key = KA.key_agreement(pk, sk, p)
+                seed = 0
                 for i in range(0, len(key), 4):
-                    ks.append(int.from_bytes(key[i:i + 4], 'little'))
-                r = np.zeros(shape)
-                for seed in ks:
-                    seed %= 2 ** 32 - 1
-                    np.random.seed(seed)
-                    r += np.random.random(shape)
+                    seed += int.from_bytes(key[i:i + 4], 'little')
+                seed %= 2 ** 32 - 1
+                seeds[v] = seed
 
+        for name, data in self.diff.items():
+            shape = data.shape()
+            self.p_u_v[name] = np.zeros_like(shape)
+            r = np.zeros(shape)
+            for v,seed in seeds.items():
+                np.random.seed(seed)
+                r += np.random.random(shape)
                 if u > v:
                     self.p_u_v += r
                 else:
                     self.p_u_v -= r
-        self.p_u_v_c = count
+
+
+
 
     # round_2_3 计算掩饰值2
     def compute_mask_2(self):
@@ -151,7 +191,7 @@ class Client:
     # round_3_1 解密需要重建密钥的用户集合
     def decrypt_e_other(self):
         self.share = [0] * len(self.U_recon)
-        split = self.client_conf['split'].encode()
+        split = self.conf['split'].encode()
         for i in range(len(self.U_recon)):
             if self.U_recon[i]:
                 e = self.e_other[i]
@@ -172,4 +212,4 @@ class Client:
 
 
 if __name__ == '__main__':
-    client = Client(1, utils.load_json('./config/client.json'), utils.load_json('./config/model.json'))
+    client = Client(1, utils.load_json('./config/conf.json'))

@@ -17,14 +17,12 @@ if __name__ == '__main__':
     # 初始化客户端
     logging.info("init start")
     clients = []
-    client_config = utils.load_json('./config/client.json')
-    model_config = utils.load_json('./config/model.json')
-    server_config = utils.load_json('./config/server.json')
-    client_num = server_config['client_num']
+    config = utils.load_json('./config/conf.json')
+    client_num = config['client_num']
     for i in range(client_num):
-        clients.append(client.Client(i, client_config, model_config))
-    serverA = serverA.ServerA(server_config, model_config)
-    serverB = serverB.ServerB(server_config)
+        clients.append(client.Client(i, config))
+    serverA = serverA.ServerA(config)
+    serverB = serverB.ServerB(config)
     temp = [0] * client_num
     temp_bu = [0] * client_num
     temp_yu = [0] * client_num
@@ -121,7 +119,7 @@ if __name__ == '__main__':
 
     # verify
     logging.info("true result:")
-    s = np.zeros(serverA.server_conf['w_size'])
+    s = np.zeros(config['w_size'])
     for c in clients:
         if u_5[c.id]:
             s += c.w
