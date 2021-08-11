@@ -7,11 +7,23 @@
 
 	"split" : "|||",
 
-	"local_epochs" : 3,
-
 	"share_secrets_t" : 5,
 
     "client_num" : 10,
 
-	"rounding" : 5
+	"rounding" : 5,
+
+	"model_name" : "resnet18",
+
+	"global_epochs" : 1,
+
+	"local_epochs" : 3,
+
+	"batch_size" : 32,
+
+	"lr" : 0.001,
+
+	"momentum" : 0.0001,
+
+	"lambda" : 0.1
 }

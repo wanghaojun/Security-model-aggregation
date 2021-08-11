@@ -2,6 +2,7 @@ from Double_Cloud import utils
 from Double_Cloud import client
 from Double_Cloud import serverA
 from Double_Cloud import serverB
+from Double_Cloud import datasets
 
 import numpy as np
 import logging
@@ -19,9 +20,10 @@ if __name__ == '__main__':
     clients = []
     config = utils.load_json('./config/conf.json')
     client_num = config['client_num']
+    train_data,eval_data = datasets.get_dataset("./data/",'cifar')
     for i in range(client_num):
-        clients.append(client.Client(i, config))
-    serverA = serverA.ServerA(config)
+        clients.append(client.Client(i, config, train_data))
+    serverA = serverA.ServerA(config,eval_data)
     serverB = serverB.ServerB(config)
     temp = [0] * client_num
     temp_bu = [0] * client_num
@@ -59,72 +61,83 @@ if __name__ == '__main__':
             temp[i] = serverA.send_e_other(i)
     logging.info("round1 end")
 
-    # round 2
-    logging.info("round2 start")
     for i in range(client_num):
-        if clients_s[i]:
-            c = clients[i]
-            c.receive_e_other(temp[i])
+        clients[i].receive_e_other(temp[i])
 
-            c.model_update()
-            c.compute_mask_1()
-            c.compute_mask_2()
-            c.compute_mask_vector()
 
-            _, temp_bu[i] = c.send_b_u_A()
-            _, temp_yu[i] = c.send_y_u_B()
+    acc, loss, size = serverA.model_eval()
+    logging.info("acc: " + str(acc) + ',' + " loss: " + str(loss) + " size: " + str(size))
 
-    # clients_s[1] = 0
-    for i in range(client_num):
-        if clients_s[i]:
-            serverA.receive_b_u(i, temp_bu[i])
+    for e in range(config['global_epochs']):
+        # round 2
+        # logging.info("round2 start")
+        for i in range(client_num):
+            if clients_s[i]:
+                c = clients[i]
 
-    clients_s[2] = 0
-    for i in range(client_num):
-        if clients_s[i]:
-            serverB.receive_y_u(i, temp_yu[i])
+                # c.receive_model(serverA.global_model)
+                c.model_update(serverA.global_model)
+                c.compute_mask_1()
+                c.compute_mask_2()
+                c.compute_mask_vector()
 
-    U_3 = serverA.send_survive_client()
-    serverB.receive_u_3(U_3)
-    serverB.intersection_u3_u4()
-    serverB.sum_y_u()
-    u_5, s = serverB.send_u5_sum()
-    serverA.receive_u5_sum(u_5, s)
-    serverA.compute_u_recon()
+                _, temp_bu[i] = c.send_b_u_A()
+                _, temp_yu[i] = c.send_y_u_B()
 
-    for i in range(client_num):
-        if clients_s[i]:
-            temp[i] = serverA.send_recon(i)
-    logging.info("round2 end")
+        # clients_s[1] = 0
+        for i in range(client_num):
+            if clients_s[i]:
+                serverA.receive_b_u(i, temp_bu[i])
 
-    # clients_s[7] = 0
+        # clients_s[2] = 0
+        for i in range(client_num):
+            if clients_s[i]:
+                serverB.receive_y_u(i, temp_yu[i])
 
-    # round 3
-    logging.info("round3 start")
-    for i in range(client_num):
-        if clients_s[i]:
-            c = clients[i]
-            c.receive_u_recon(temp[i])
-            c.decrypt_e_other()
-            id, share = c.send_share()
-            serverA.receive_share(id, share)
+        U_3 = serverA.send_survive_client()
+        serverB.receive_u_3(U_3)
+        serverB.intersection_u3_u4()
+        serverB.sum_y_u()
+        u_5, s = serverB.send_u5_sum()
+        serverA.receive_u5_sum(u_5, s)
+        serverA.compute_u_recon()
 
-    serverA.sum_p_u()
-    serverA.reconstruction()
-    serverA.sum_recon_p_u_v()
-    serverA.compute_res()
-    logging.info("round3 end")
+        for i in range(client_num):
+            if clients_s[i]:
+                temp[i] = serverA.send_recon(i)
+        # logging.info("round2 end")
 
-    # logging.info("aggregation result:" )
+        clients_s[7] = 0
+
+        # round 3
+        # logging.info("round3 start")
+        for i in range(client_num):
+            if clients_s[i]:
+                c = clients[i]
+                c.receive_u_recon(temp[i])
+                c.decrypt_e_other()
+                id, share = c.send_share()
+                serverA.receive_share(id, share)
+
+        serverA.sum_p_u()
+        serverA.reconstruction()
+        serverA.sum_recon_p_u_v()
+        serverA.compute_res()
+
+        # logging.info("round3 end")
+        serverA.global_model_update()
+        acc, loss, size = serverA.model_eval()
+        logging.info("Epoch %d, acc: %f, loss: %f\n" % (e, acc, loss))
+
 
     # verify
-    logging.info("true result:")
-    s = np.zeros(config['w_size'])
-    for c in clients:
-        if u_5[c.id]:
-            s += c.w
-    logging.info(s)
-    logging.info(s == serverA.res)
+    # logging.info("true result:")
+    # s = np.zeros(config['w_size'])
+    # for c in clients:
+    #     if u_5[c.id]:
+    #         s += c.w
+    # logging.info(s)
+    # logging.info(s == serverA.res)
 
 
 

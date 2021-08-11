@@ -9,13 +9,13 @@ class ServerB:
         self.conf = conf
         self.client_num = self.conf['client_num']
 
-        self.y_u = [0] * self.client_num
+        self.y_u = {}
 
         self.U_3 = []
         self.U_4 = [0] * self.client_num
 
         self.U_5 = [0] * self.client_num
-        self.sum = np.zeros(self.conf['w_size'])
+        self.sum = dict()
 
     # round_2_0 接收来自客户端的y_u
     def receive_y_u(self,u,y_u):
@@ -36,8 +36,12 @@ class ServerB:
     # round_2_3 对y_u求和
     def sum_y_u(self):
         for i in range(self.client_num):
-            if self.U_5[i] and self.U_4[i]:
-                self.sum += self.y_u[i]
+            if self.U_5[i]:
+                for name, data in self.y_u[i].items():
+                    if name not in self.sum:
+                        self.sum[name] = data
+                    else:
+                        self.sum[name] += data
 
     # round_2_4 发送u_5和sum给服务器A
     def send_u5_sum(self):

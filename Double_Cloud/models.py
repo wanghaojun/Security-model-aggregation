@@ -19,8 +19,11 @@ def get_model(name="resnet18", pretrained=True):
         model = models.inception_v3(pretrained=pretrained)
     elif name == "googlenet":
         model = models.googlenet(pretrained=pretrained)
+    elif name == "test":
+        return {'layer0':None,'layer1':None,'layer2':None,'layer3':None,'layer4':None}
 
     if torch.cuda.is_available():
         return model.cuda()
     else:
         return model
+

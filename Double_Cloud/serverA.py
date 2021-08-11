@@ -1,13 +1,16 @@
-from Double_Cloud import utils
+from Double_Cloud import models
 import numpy as np
 from tools import SecretShare as SS
 from tools import KeyAgreement as KA
-
+import torch
 
 class ServerA:
-    def __init__(self,conf):
+    def __init__(self,conf,eval_dataset):
         self.name = 'serverA'
         self.conf = conf
+        self.global_model = models.get_model(self.conf["model_name"])
+        self.eval_loader = torch.utils.data.DataLoader(eval_dataset, batch_size=self.conf["batch_size"], shuffle=True)
+
         self.client_num = self.conf['client_num']
         self.size = self.conf['w_size']
 
@@ -26,11 +29,11 @@ class ServerA:
         self.U_recon = [0] * self.client_num
         self.shares = []
 
-        self.p_u_sum = np.zeros(self.size)
-        self.p_u_v_sum = np.zeros(self.size)
+        self.p_u_sum = dict()
+        self.p_u_v_sum = dict()
         self.sk_recon = [0] * self.client_num
         self.s_p, self.s_g = KA.init_parameter(self.conf['s_size'])
-        self.res = None
+        self.res = dict()
 
     # round_0_0 接受客户端的公钥
     # 用户列表为U_1
@@ -93,13 +96,15 @@ class ServerA:
     def receive_share(self, u, share):
         self.shares.append(share)
 
-    # round_3_1 聚合掩饰值2p_u
+    # round_3_1 聚合掩饰值2 p_u
     def sum_p_u(self):
+        for name,data in self.sum.items():
+            self.p_u_sum[name] = np.zeros(data.shape)
         for i in range(self.client_num):
             if self.U_5[i]:
-                np.random.seed(self.b_u[i])
-                p_u = np.random.random(self.size)
-                self.p_u_sum += p_u
+                for name, data in self.sum.items():
+                    np.random.seed(self.b_u[i])
+                    self.p_u_sum[name] += np.random.random(data.shape)
 
     # round_3_2 重建掉线用户U_recon密钥
     def reconstruction(self):
@@ -114,29 +119,88 @@ class ServerA:
     # round_3_3 计算掉线用户U_recon带来的损失
     def sum_recon_p_u_v(self):
         p = self.s_p
+        for name,data in self.sum.items():
+            self.p_u_v_sum[name] = np.zeros(data.shape)
+
         for u in range(self.client_num):
             if self.sk_recon[u]:
                 sk = self.sk_recon[u]
-                p_u_v = np.zeros(self.size)
+                seeds = dict()
                 for v in range(self.client_num):
                     if self.U_5[v]:
+                        seed = 0
                         pk = self.client_pk[v][2]
-                        ks = []
-                        key = KA.key_agreement(pk, sk, p)
+                        key = KA.key_agreement(pk,sk,p)
                         for i in range(0, len(key), 4):
-                            ks.append(int.from_bytes(key[i:i + 4], 'little'))
-                        r = np.zeros(self.size)
-                        for seed in ks:
-                            seed %= 2 ** 32 - 1
-                            np.random.seed(seed)
-                            r += np.random.random(self.size)
+                            seed += int.from_bytes(key[i:i + 4], 'little')
+                        seed %= 2**32 -1
+                        seeds[v] = seed
+                for v, seed in seeds.items():
+                    np.random.seed(seed)
+                    for name, data in self.p_u_v_sum.items():
                         if u > v:
-                            p_u_v += r
-                        else:
-                            p_u_v -= r
-                self.p_u_v_sum += p_u_v
+                            self.p_u_v_sum[name] += np.random.random(data.shape)
+                        elif u < v:
+                            self.p_u_v_sum[name] -= np.random.random(data.shape)
+
+
+
+                # p_u_v = np.zeros(self.size)
+                # for v in range(self.client_num):
+                #     if self.U_5[v]:
+                #         pk = self.client_pk[v][2]
+                #         ks = []
+                #         key = KA.key_agreement(pk, sk, p)
+                #         for i in range(0, len(key), 4):
+                #             ks.append(int.from_bytes(key[i:i + 4], 'little'))
+                #         r = np.zeros(self.size)
+                #         for seed in ks:
+                #             seed %= 2 ** 32 - 1
+                #             np.random.seed(seed)
+                #             r += np.random.random(self.size)
+                #         if u > v:
+                #             p_u_v += r
+                #         else:
+                #             p_u_v -= r
+                # self.p_u_v_sum += p_u_v
 
     # round_3_4 计算最终聚合结果
     def compute_res(self):
-        _res = (self.sum - self.p_u_sum + self.p_u_v_sum).round(self.conf['rounding'] + 1)
-        self.res = np.array(_res).round(self.conf['rounding'] - 1)
+        for name,data in self.sum.items():
+            _res = (self.sum[name] - self.p_u_sum[name] + self.p_u_v_sum[name]).round(self.conf['rounding'] + 1)
+            self.res[name] = np.array(_res).round(self.conf['rounding'] - 1)
+
+    def global_model_update(self):
+        for name,data in self.global_model.state_dict().items():
+
+            update_per_layer = torch.from_numpy(np.array(self.res[name])).cuda() * self.conf["lambda"]
+            if data.type() != update_per_layer.type():
+                data.add_(update_per_layer.to(torch.int64))
+            else:
+                data.add_(update_per_layer)
+
+
+    def model_eval(self):
+        self.global_model.eval()
+
+        total_loss = 0.0
+        correct = 0
+        dataset_size = 0
+        for batch_id, batch in enumerate(self.eval_loader):
+            data, target = batch
+            dataset_size += data.size()[0]
+
+            if torch.cuda.is_available():
+                data = data.cuda()
+                target = target.cuda()
+
+            output = self.global_model(data)
+
+            total_loss += torch.nn.functional.cross_entropy(output, target, reduction='sum').item()  # sum up batch loss
+            pred = output.data.max(1)[1]  # get the index of the max log-probability
+            correct += pred.eq(target.data.view_as(pred)).cpu().sum().item()
+
+        acc = 100.0 * (float(correct) / float(dataset_size))
+        total_l = total_loss / dataset_size
+
+        return acc, total_l, dataset_size

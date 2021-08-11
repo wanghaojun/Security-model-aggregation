@@ -6,7 +6,13 @@ import numpy as np
 import random
 import Double_Cloud.models as model
 import torch
+import logging
+import time
 
+logger = logging.Logger("protocol",level=logging.INFO)
+LOG_FORMAT = "%(name)s - %(asctime)s  - %(levelname)s - %(message)s"
+current_time = lambda: int(round(time.time() * 1000))
+logging.basicConfig(level=logging.INFO,format=LOG_FORMAT)
 
 class Client:
 
@@ -18,10 +24,11 @@ class Client:
         self.name = 'client_' + str(self.id)
         self.diff = dict()
 
-        self.local_model = model.get_model(self.conf["model_name"])
+        self.local_model = model.get_model("resnet18")
         self.train_dataset = train_dataset
+
         all_range = list(range(len(self.train_dataset)))
-        data_len = int(len(self.train_dataset) / self.conf['no_models'])
+        data_len = int(len(self.train_dataset) / self.conf['client_num'])
         train_indices = all_range[id * data_len: (id + 1) * data_len]
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset, batch_size=conf["batch_size"],
                                                         sampler=torch.utils.data.sampler.SubsetRandomSampler(
@@ -40,13 +47,12 @@ class Client:
         self.e = []
         self.e_other = []
 
-        self.p_u_v = None
-        self.p_u_v_c = 0
+        self.p_u_v = {}
 
         self.b_u = None
-        self.p_u = None
+        self.p_u = {}
 
-        self.y_u = np.ndarray(self.conf['w_size'])
+        self.y_u = {}
 
         self.U_recon = None
         self.share = []
@@ -101,16 +107,18 @@ class Client:
     def receive_e_other(self, e_other):
         self.e_other = e_other
 
+    def receive_model(self,model):
+        for name, param in model.state_dict().items():
+            self.local_model.state_dict()[name].copy_(param.clone())
+
     # round_2_1 模型参数更新
     def model_update(self,model):
 
         for name, param in model.state_dict().items():
             self.local_model.state_dict()[name].copy_(param.clone())
 
-        # print(id(model))
         optimizer = torch.optim.SGD(self.local_model.parameters(), lr=self.conf['lr'],
                                     momentum=self.conf['momentum'])
-        # print(id(self.local_model))
         self.local_model.train()
         for e in range(self.conf["local_epochs"]):
 
@@ -127,15 +135,23 @@ class Client:
                 loss.backward()
 
                 optimizer.step()
-            print("Epoch %d done." % e)
+            # logging.info(self.name + " local epochs:" + str(e))
         for name, data in self.local_model.state_dict().items():
-            self.diff[name] = (data - model.state_dict()[name]).numpy()
+            self.diff[name] = (data - model.state_dict()[name]).cpu().numpy()
+        # print(self.diff['conv1.weight'])
+
+    def model_updata_test(self):
+        for name,data in self.local_model.items():
+            self.diff[name] = np.ones((2,2,3,4))
 
     # round_2_2 计算掩饰值1
     def compute_mask_1(self):
         self.p_u_v = dict()
+        for name, data in self.diff.items():
+            self.p_u_v[name] = np.zeros(data.shape)
         u = self.id
-        seeds = {}
+        seeds = dict()
+        # 计算 与其他客户端密钥交换生成的种子
         for item in self.client_pk:
             v = int(item[0])
             if u == v:
@@ -150,31 +166,30 @@ class Client:
                     seed += int.from_bytes(key[i:i + 4], 'little')
                 seed %= 2 ** 32 - 1
                 seeds[v] = seed
-
-        for name, data in self.diff.items():
-            shape = data.shape()
-            self.p_u_v[name] = np.zeros_like(shape)
-            r = np.zeros(shape)
-            for v,seed in seeds.items():
-                np.random.seed(seed)
-                r += np.random.random(shape)
+        # 根据种子计算随机数
+        for v,seed in seeds.items():
+            np.random.seed(seed)
+            for name, data in self.p_u_v.items():
                 if u > v:
-                    self.p_u_v += r
-                else:
-                    self.p_u_v -= r
-
+                    self.p_u_v[name] += np.random.random(data.shape)
+                elif u < v:
+                    self.p_u_v[name] -= np.random.random(data.shape)
 
 
 
     # round_2_3 计算掩饰值2
     def compute_mask_2(self):
         self.b_u = int(random.random() * (10 ** 16)) % (2 ** 32 - 1)
-        np.random.seed(self.b_u)
-        self.p_u = np.random.random(self.w.shape)
+        self.p_u = dict()
+        for name, data in self.diff.items():
+            np.random.seed(self.b_u)
+            self.p_u[name] = np.random.random(data.shape)
 
     # round_2_4 计算掩饰后的私有向量
     def compute_mask_vector(self):
-        self.y_u = self.w + self.p_u + self.p_u_v
+        for name, data in self.diff.items():
+            self.y_u[name] = data + self.p_u[name] + self.p_u_v[name]
+
 
     # round_2_5 向服务器A发送b_u
     def send_b_u_A(self):
@@ -211,5 +226,4 @@ class Client:
         return self.id, self.share
 
 
-if __name__ == '__main__':
-    client = Client(1, utils.load_json('./config/conf.json'))
+
