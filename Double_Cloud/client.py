@@ -176,7 +176,6 @@ class Client:
                     self.p_u_v[name] -= np.random.random(data.shape)
 
 
-
     # round_2_3 计算掩饰值2
     def compute_mask_2(self):
         self.b_u = int(random.random() * (10 ** 16)) % (2 ** 32 - 1)

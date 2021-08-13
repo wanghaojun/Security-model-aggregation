@@ -4,6 +4,12 @@ from tools import SecretShare as SS
 from tools import KeyAgreement as KA
 import torch
 
+import logging,time
+
+logger = logging.Logger("protocol",level=logging.INFO)
+LOG_FORMAT = "%(name)s - %(asctime)s  - %(levelname)s - %(message)s"
+current_time = lambda: int(round(time.time() * 1000))
+logging.basicConfig(level=logging.INFO,format=LOG_FORMAT)
 class ServerA:
     def __init__(self,conf,eval_dataset):
         self.name = 'serverA'
@@ -20,6 +26,22 @@ class ServerA:
         self.e_u_v = [[0 for _ in range(self.client_num)] for i in range(self.client_num)]
         self.U_2 = [0] * self.client_num
 
+        self.b_u = [0] * self.client_num
+        self.U_3 = [0] * self.client_num
+
+        self.sum = None
+        self.U_5 = None
+
+        self.U_recon = [0] * self.client_num
+        self.shares = []
+
+        self.p_u_sum = dict()
+        self.p_u_v_sum = dict()
+        self.sk_recon = [0] * self.client_num
+        self.s_p, self.s_g = KA.init_parameter(self.conf['s_size'])
+        self.res = dict()
+
+    def reset(self):
         self.b_u = [0] * self.client_num
         self.U_3 = [0] * self.client_num
 
@@ -144,45 +166,28 @@ class ServerA:
                             self.p_u_v_sum[name] -= np.random.random(data.shape)
 
 
-
-                # p_u_v = np.zeros(self.size)
-                # for v in range(self.client_num):
-                #     if self.U_5[v]:
-                #         pk = self.client_pk[v][2]
-                #         ks = []
-                #         key = KA.key_agreement(pk, sk, p)
-                #         for i in range(0, len(key), 4):
-                #             ks.append(int.from_bytes(key[i:i + 4], 'little'))
-                #         r = np.zeros(self.size)
-                #         for seed in ks:
-                #             seed %= 2 ** 32 - 1
-                #             np.random.seed(seed)
-                #             r += np.random.random(self.size)
-                #         if u > v:
-                #             p_u_v += r
-                #         else:
-                #             p_u_v -= r
-                # self.p_u_v_sum += p_u_v
-
     # round_3_4 计算最终聚合结果
     def compute_res(self):
         for name,data in self.sum.items():
-            _res = (self.sum[name] - self.p_u_sum[name] + self.p_u_v_sum[name]).round(self.conf['rounding'] + 1)
-            self.res[name] = np.array(_res).round(self.conf['rounding'] - 1)
+            self.res[name] = self.sum[name] - self.p_u_sum[name] + self.p_u_v_sum[name]
+
 
     def global_model_update(self):
         for name,data in self.global_model.state_dict().items():
-
             update_per_layer = torch.from_numpy(np.array(self.res[name])).cuda() * self.conf["lambda"]
+            update_per_layer = update_per_layer.to(torch.float32)
             if data.type() != update_per_layer.type():
                 data.add_(update_per_layer.to(torch.int64))
             else:
                 data.add_(update_per_layer)
+            # if data.type() != update_per_layer.type():
+            #     data.add_(update_per_layer.to(torch.float32))
+            # else:
+            #     data.add_(update_per_layer)
 
 
     def model_eval(self):
         self.global_model.eval()
-
         total_loss = 0.0
         correct = 0
         dataset_size = 0
