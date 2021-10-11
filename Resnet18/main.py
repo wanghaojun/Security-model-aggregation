@@ -1,7 +1,7 @@
 import torch
 from Resnet18 import model as modeltool
 from Resnet18 import dataset
-epoch = 20
+epoch = 100
 lr = 0.001
 momentum = 0.0001
 batch_size = 32

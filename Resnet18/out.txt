@@ -1,39 +1,199 @@
-Epoch 0, acc: 55.850000, loss: 1.326514
+Epoch 0, acc: 55.360000, loss: 1.303715
 
-Epoch 1, acc: 67.430000, loss: 0.927676
+Epoch 1, acc: 66.140000, loss: 0.960437
 
-Epoch 2, acc: 69.840000, loss: 0.857800
+Epoch 2, acc: 69.560000, loss: 0.871439
 
-Epoch 3, acc: 72.840000, loss: 0.775178
+Epoch 3, acc: 72.940000, loss: 0.762542
 
-Epoch 4, acc: 73.670000, loss: 0.758842
+Epoch 4, acc: 74.620000, loss: 0.735452
 
-Epoch 5, acc: 75.080000, loss: 0.719999
+Epoch 5, acc: 73.770000, loss: 0.754429
 
-Epoch 6, acc: 75.690000, loss: 0.703666
+Epoch 6, acc: 75.090000, loss: 0.714288
 
-Epoch 7, acc: 76.870000, loss: 0.668609
+Epoch 7, acc: 76.840000, loss: 0.668536
 
-Epoch 8, acc: 77.120000, loss: 0.669556
+Epoch 8, acc: 78.320000, loss: 0.618336
 
-Epoch 9, acc: 77.770000, loss: 0.647277
+Epoch 9, acc: 78.040000, loss: 0.638124
 
-Epoch 10, acc: 78.060000, loss: 0.630147
+Epoch 10, acc: 79.220000, loss: 0.605143
 
-Epoch 11, acc: 79.130000, loss: 0.608886
+Epoch 11, acc: 79.240000, loss: 0.612682
 
-Epoch 12, acc: 78.990000, loss: 0.616107
+Epoch 12, acc: 79.590000, loss: 0.597171
 
-Epoch 13, acc: 79.150000, loss: 0.603257
+Epoch 13, acc: 79.680000, loss: 0.591810
 
-Epoch 14, acc: 79.990000, loss: 0.583290
+Epoch 14, acc: 79.590000, loss: 0.587516
 
-Epoch 15, acc: 80.020000, loss: 0.599736
+Epoch 15, acc: 79.860000, loss: 0.583619
 
-Epoch 16, acc: 80.000000, loss: 0.585582
+Epoch 16, acc: 80.120000, loss: 0.572752
 
-Epoch 17, acc: 79.320000, loss: 0.603452
+Epoch 17, acc: 80.290000, loss: 0.579890
 
-Epoch 18, acc: 80.030000, loss: 0.596362
+Epoch 18, acc: 80.560000, loss: 0.573428
 
-Epoch 19, acc: 80.830000, loss: 0.574468
+Epoch 19, acc: 80.870000, loss: 0.568646
+
+Epoch 20, acc: 81.020000, loss: 0.574768
+
+Epoch 21, acc: 81.670000, loss: 0.547455
+
+Epoch 22, acc: 81.470000, loss: 0.563185
+
+Epoch 23, acc: 81.610000, loss: 0.559561
+
+Epoch 24, acc: 81.640000, loss: 0.557928
+
+Epoch 25, acc: 81.510000, loss: 0.555537
+
+Epoch 26, acc: 81.940000, loss: 0.553307
+
+Epoch 27, acc: 82.010000, loss: 0.551642
+
+Epoch 28, acc: 81.990000, loss: 0.559958
+
+Epoch 29, acc: 82.130000, loss: 0.547845
+
+Epoch 30, acc: 82.070000, loss: 0.554860
+
+Epoch 31, acc: 81.840000, loss: 0.581604
+
+Epoch 32, acc: 81.970000, loss: 0.563407
+
+Epoch 33, acc: 82.150000, loss: 0.571915
+
+Epoch 34, acc: 82.240000, loss: 0.558679
+
+Epoch 35, acc: 82.080000, loss: 0.562522
+
+Epoch 36, acc: 82.130000, loss: 0.570014
+
+Epoch 37, acc: 82.050000, loss: 0.595540
+
+Epoch 38, acc: 81.410000, loss: 0.596387
+
+Epoch 39, acc: 82.320000, loss: 0.584562
+
+Epoch 40, acc: 82.930000, loss: 0.569476
+
+Epoch 41, acc: 81.920000, loss: 0.588666
+
+Epoch 42, acc: 82.550000, loss: 0.586231
+
+Epoch 43, acc: 82.460000, loss: 0.579511
+
+Epoch 44, acc: 83.020000, loss: 0.580563
+
+Epoch 45, acc: 82.660000, loss: 0.589973
+
+Epoch 46, acc: 82.140000, loss: 0.613417
+
+Epoch 47, acc: 82.260000, loss: 0.615461
+
+Epoch 48, acc: 82.400000, loss: 0.609860
+
+Epoch 49, acc: 82.320000, loss: 0.607859
+
+Epoch 50, acc: 82.520000, loss: 0.615392
+
+Epoch 51, acc: 81.880000, loss: 0.638169
+
+Epoch 52, acc: 82.610000, loss: 0.623192
+
+Epoch 53, acc: 82.450000, loss: 0.628330
+
+Epoch 54, acc: 82.690000, loss: 0.627094
+
+Epoch 55, acc: 82.780000, loss: 0.617037
+
+Epoch 56, acc: 83.050000, loss: 0.617589
+
+Epoch 57, acc: 82.870000, loss: 0.625714
+
+Epoch 58, acc: 83.000000, loss: 0.623422
+
+Epoch 59, acc: 81.210000, loss: 0.706942
+
+Epoch 60, acc: 82.300000, loss: 0.666345
+
+Epoch 61, acc: 83.340000, loss: 0.633390
+
+Epoch 62, acc: 82.440000, loss: 0.661157
+
+Epoch 63, acc: 83.150000, loss: 0.648564
+
+Epoch 64, acc: 83.080000, loss: 0.650831
+
+Epoch 65, acc: 83.060000, loss: 0.672710
+
+Epoch 66, acc: 82.700000, loss: 0.682319
+
+Epoch 67, acc: 83.000000, loss: 0.677877
+
+Epoch 68, acc: 83.140000, loss: 0.684769
+
+Epoch 69, acc: 82.880000, loss: 0.673742
+
+Epoch 70, acc: 82.300000, loss: 0.712181
+
+Epoch 71, acc: 83.490000, loss: 0.681796
+
+Epoch 72, acc: 83.140000, loss: 0.685720
+
+Epoch 73, acc: 82.540000, loss: 0.712400
+
+Epoch 74, acc: 82.810000, loss: 0.701216
+
+Epoch 75, acc: 82.820000, loss: 0.711172
+
+Epoch 76, acc: 83.250000, loss: 0.709794
+
+Epoch 77, acc: 82.670000, loss: 0.726435
+
+Epoch 78, acc: 82.920000, loss: 0.718490
+
+Epoch 79, acc: 83.020000, loss: 0.749639
+
+Epoch 80, acc: 82.870000, loss: 0.719649
+
+Epoch 81, acc: 83.350000, loss: 0.720744
+
+Epoch 82, acc: 82.620000, loss: 0.744195
+
+Epoch 83, acc: 82.990000, loss: 0.762360
+
+Epoch 84, acc: 82.880000, loss: 0.732229
+
+Epoch 85, acc: 82.980000, loss: 0.746600
+
+Epoch 86, acc: 83.110000, loss: 0.747660
+
+Epoch 87, acc: 82.550000, loss: 0.798172
+
+Epoch 88, acc: 83.380000, loss: 0.744696
+
+Epoch 89, acc: 83.490000, loss: 0.746170
+
+Epoch 90, acc: 82.720000, loss: 0.771435
+
+Epoch 91, acc: 82.700000, loss: 0.797940
+
+Epoch 92, acc: 83.160000, loss: 0.780609
+
+Epoch 93, acc: 83.380000, loss: 0.763109
+
+Epoch 94, acc: 83.130000, loss: 0.799449
+
+Epoch 95, acc: 82.940000, loss: 0.801449
+
+Epoch 96, acc: 83.250000, loss: 0.801304
+
+Epoch 97, acc: 83.130000, loss: 0.795717
+
+Epoch 98, acc: 82.730000, loss: 0.815020
+
+Epoch 99, acc: 83.070000, loss: 0.819657

@@ -17,4 +17,12 @@ root - 2021-08-13 13:55:24,625  - INFO - Epoch 15, acc: 70.770000, loss: 0.85283
 root - 2021-08-13 13:56:48,764  - INFO - Epoch 16, acc: 70.660000, loss: 0.849903, aggregation_num: 9
 root - 2021-08-13 13:58:21,281  - INFO - Epoch 17, acc: 71.200000, loss: 0.850775, aggregation_num: 10
 root - 2021-08-13 13:59:45,402  - INFO - Epoch 18, acc: 71.600000, loss: 0.830108, aggregation_num: 9
-root - 2021-08-13 14:00:52,491  - INFO - Epoch 19, acc: 71.950000, loss: 0.817718, aggregation_num: 7
+root - 2021-08-13 14:00:52,491  - INFO - Epoch 19, acc: 71.950000, loss: 0.817718, aggregation_num: 9
+
+
+Files already downloaded and verified
+root - 2021-10-11 12:07:59,483  - INFO - init end
+root - 2021-10-11 12:07:59,483  - INFO - round0 start
+root - 2021-10-11 12:07:59,531  - INFO - round0 end
+root - 2021-10-11 12:07:59,531  - INFO - round1 start
+root - 2021-10-11 12:07:59,857  - INFO - round1 end

@@ -80,9 +80,9 @@ if __name__ == '__main__':
         temp_bu = [0] * client_num
         temp_yu = [0] * client_num
         clients_s = [1] * client_num
-        for i in range(config['client_num'] - config['share_secrets_t']):
-            dorp_id = random.randint(0, 9)
-            clients_s[dorp_id] = random.randint(0, 1)
+        drop_ids = random.sample(range(10),int(client_num * config['loss']))
+        for id in drop_ids:
+            clients_s[id] = 0
 
         for c in clients:
             # c.receive_model(serverA.global_model)

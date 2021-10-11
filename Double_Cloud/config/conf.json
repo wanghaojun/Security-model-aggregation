@@ -5,17 +5,17 @@
 
     "w_size" : 100,
 
-	"split" : "|||",
+	"split" : "\\||",
 
 	"share_secrets_t" : 5,
 
-    "client_num" : 20,
-
-	"rounding" : 5,
+    "client_num" : 10,
 
 	"model_name" : "resnet18",
 
 	"global_epochs" : 20,
+
+	"loss" :  0.3,
 
 	"local_epochs" : 3,
 
@@ -27,3 +27,6 @@
 
 	"lambda" : 0.1
 }
+
+
+
