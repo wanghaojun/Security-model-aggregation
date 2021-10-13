@@ -7,4 +7,4 @@ rounding = 6
 
 share_secrets_t = 5
 
-split = '|||'
+split = '\|\|'
