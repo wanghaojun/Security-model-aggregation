@@ -1,22 +1,14 @@
-from DSFL import models
+from DSSA import Config
 import numpy as np
 from tools import SecretShare as SS
 from tools import KeyAgreement as KA
-import torch
 
-import logging,time
 
-logger = logging.Logger("protocol",level=logging.INFO)
-LOG_FORMAT = "%(name)s - %(asctime)s  - %(levelname)s - %(message)s"
-current_time = lambda: int(round(time.time() * 1000))
-logging.basicConfig(level=logging.INFO,format=LOG_FORMAT)
 class ServerA:
-    def __init__(self,conf,eval_dataset):
+    def __init__(self):
         self.name = 'serverA'
-        self.conf = conf
-
-        self.client_num = self.conf['client_num']
-        self.size = self.conf['w_size']
+        self.client_num = Config.client_num
+        self.size = Config.w_size
 
         self.client_pk = [0] * self.client_num
         self.U_1 = [0] * self.client_num
@@ -33,27 +25,11 @@ class ServerA:
         self.U_recon = [0] * self.client_num
         self.shares = []
 
-        self.p_u_sum = dict()
-        self.p_u_v_sum = dict()
+        self.p_u_sum = np.zeros(self.size)
+        self.p_u_v_sum = np.zeros(self.size)
         self.sk_recon = [0] * self.client_num
-        self.s_p, self.s_g = KA.init_parameter(self.conf['s_size'])
-        self.res = dict()
-
-    def reset(self):
-        self.b_u = [0] * self.client_num
-        self.U_3 = [0] * self.client_num
-
-        self.sum = None
-        self.U_5 = None
-
-        self.U_recon = [0] * self.client_num
-        self.shares = []
-
-        self.p_u_sum = dict()
-        self.p_u_v_sum = dict()
-        self.sk_recon = [0] * self.client_num
-        self.s_p, self.s_g = KA.init_parameter(self.conf['s_size'])
-        self.res = dict()
+        self.s_p, self.s_g = KA.init_parameter(Config.s_size)
+        self.res = None
 
     # round_0_0 接受客户端的公钥
     # 用户列表为U_1
@@ -116,19 +92,17 @@ class ServerA:
     def receive_share(self, u, share):
         self.shares.append(share)
 
-    # round_3_1 聚合掩饰值2 p_u
+    # round_3_1 聚合掩饰值2p_u
     def sum_p_u(self):
-        for name,data in self.sum.items():
-            self.p_u_sum[name] = np.zeros(data.shape)
         for i in range(self.client_num):
             if self.U_5[i]:
-                for name, data in self.sum.items():
-                    np.random.seed(self.b_u[i])
-                    self.p_u_sum[name] += np.random.random(data.shape)
+                np.random.seed(self.b_u[i])
+                p_u = np.random.random(self.size)
+                self.p_u_sum += p_u
 
     # round_3_2 重建掉线用户U_recon密钥
     def reconstruction(self):
-        t = self.conf['share_secrets_t']
+        t = Config.share_secrets_t
         for i in range(self.client_num):
             if self.U_recon[i]:
                 share = [x[i] for x in self.shares]
@@ -139,34 +113,29 @@ class ServerA:
     # round_3_3 计算掉线用户U_recon带来的损失
     def sum_recon_p_u_v(self):
         p = self.s_p
-        for name,data in self.sum.items():
-            self.p_u_v_sum[name] = np.zeros(data.shape)
-
         for u in range(self.client_num):
             if self.sk_recon[u]:
                 sk = self.sk_recon[u]
-                seeds = dict()
+                p_u_v = np.zeros(self.size)
                 for v in range(self.client_num):
                     if self.U_5[v]:
-                        seed = 0
                         pk = self.client_pk[v][2]
-                        key = KA.key_agreement(pk,sk,p)
+                        ks = []
+                        key = KA.key_agreement(pk, sk, p)
                         for i in range(0, len(key), 4):
-                            seed += int.from_bytes(key[i:i + 4], 'little')
-                        seed %= 2**32 -1
-                        seeds[v] = seed
-                for v, seed in seeds.items():
-                    np.random.seed(seed)
-                    for name, data in self.p_u_v_sum.items():
+                            ks.append(int.from_bytes(key[i:i + 4], 'little'))
+                        r = np.zeros(self.size)
+                        for seed in ks:
+                            seed %= 2 ** 32 - 1
+                            np.random.seed(seed)
+                            r += np.random.random(self.size)
                         if u > v:
-                            self.p_u_v_sum[name] += np.random.random(data.shape)
-                        elif u < v:
-                            self.p_u_v_sum[name] -= np.random.random(data.shape)
-
+                            p_u_v += r
+                        else:
+                            p_u_v -= r
+                self.p_u_v_sum += p_u_v
 
     # round_3_4 计算最终聚合结果
     def compute_res(self):
-        for name,data in self.sum.items():
-            self.res[name] = self.sum[name] - self.p_u_sum[name] + self.p_u_v_sum[name]
-
-
+        _res = (self.sum - self.p_u_sum + self.p_u_v_sum).round(Config.rounding + 1)
+        self.res = np.array(_res).round(Config.rounding - 1)
