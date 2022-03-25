@@ -1,4 +1,4 @@
-from Double_Cloud import models
+from DSFL import models
 import numpy as np
 from tools import SecretShare as SS
 from tools import KeyAgreement as KA
@@ -14,8 +14,6 @@ class ServerA:
     def __init__(self,conf,eval_dataset):
         self.name = 'serverA'
         self.conf = conf
-        self.global_model = models.get_model(self.conf["model_name"])
-        self.eval_loader = torch.utils.data.DataLoader(eval_dataset, batch_size=self.conf["batch_size"], shuffle=True)
 
         self.client_num = self.conf['client_num']
         self.size = self.conf['w_size']
@@ -172,40 +170,3 @@ class ServerA:
             self.res[name] = self.sum[name] - self.p_u_sum[name] + self.p_u_v_sum[name]
 
 
-    def global_model_update(self):
-        for name,data in self.global_model.state_dict().items():
-            update_per_layer = torch.from_numpy(np.array(self.res[name])).cuda() * self.conf["lambda"]
-            update_per_layer = update_per_layer.to(torch.float32)
-            if data.type() != update_per_layer.type():
-                data.add_(update_per_layer.to(torch.int64))
-            else:
-                data.add_(update_per_layer)
-            # if data.type() != update_per_layer.type():
-            #     data.add_(update_per_layer.to(torch.float32))
-            # else:
-            #     data.add_(update_per_layer)
-
-
-    def model_eval(self):
-        self.global_model.eval()
-        total_loss = 0.0
-        correct = 0
-        dataset_size = 0
-        for batch_id, batch in enumerate(self.eval_loader):
-            data, target = batch
-            dataset_size += data.size()[0]
-
-            if torch.cuda.is_available():
-                data = data.cuda()
-                target = target.cuda()
-
-            output = self.global_model(data)
-
-            total_loss += torch.nn.functional.cross_entropy(output, target, reduction='sum').item()  # sum up batch loss
-            pred = output.data.max(1)[1]  # get the index of the max log-probability
-            correct += pred.eq(target.data.view_as(pred)).cpu().sum().item()
-
-        acc = 100.0 * (float(correct) / float(dataset_size))
-        total_l = total_loss / dataset_size
-
-        return acc, total_l, dataset_size

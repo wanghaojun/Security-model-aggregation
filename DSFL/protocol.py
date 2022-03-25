@@ -1,8 +1,8 @@
-from Double_Cloud import utils
-from Double_Cloud import client
-from Double_Cloud import serverA
-from Double_Cloud import serverB
-from Double_Cloud import datasets
+from DSFL import utils
+from DSFL import client
+from DSFL import serverA
+from DSFL import serverB
+from DSFL import datasets
 
 import numpy as np
 import logging

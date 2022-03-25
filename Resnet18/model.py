@@ -21,7 +21,9 @@ def get_model(name="resnet18", pretrained=True):
         model = models.googlenet(pretrained=pretrained)
 
     if torch.cuda.is_available():
+
         return model.cuda()
     else:
         return model
+
 

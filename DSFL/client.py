@@ -1,10 +1,10 @@
 from tools import KeyAgreement as KA
 from tools import SecretShare as SS
 from tools import AuthenticatedEncryption as AE
-from Double_Cloud import utils
+from DSFL import utils
 import numpy as np
 import random
-import Double_Cloud.models as model
+import DSFL.models as model
 import torch
 import logging
 import time
